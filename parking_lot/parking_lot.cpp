@@ -1,11 +1,26 @@
-#include <iostream>
-#include <string>
-#include <vector>
-#include <chrono>
-#include <mutex>
+
+/*
+Step 1: Requirements & Constraints
+Support: Multiple vehicle types (Bike, Car, Truck) and spot types (Compact, Large, Handicapped).
+
+Multiplicity: 1 Lot has many Levels; 1 Level has many Spots.
+
+Algorithm: Strategy-based spot assignment (e.g., Lowest Floor First) and fee calculation.
+
+Concurrency: Multiple entry/exit gates must not assign the same spot simultaneously.
+*/
 
 
-using namespace std;
+/*
+Step 2: List APIs
+parkVehicle(licensePlate, vehicleType) -> Returns TicketID.
+
+unparkVehicle(ticketId) -> Returns Fee.
+
+getAvailableSlots(vehicleType) -> Returns int.
+*/
+
+
 
 //Step 3
 /*
@@ -35,323 +50,186 @@ Ticket
 */
 
 //Step 4
-using Clock = std::chrono::system_clock;
-using TimePoint = std::chrono::time_point<Clock>;
 
-enum class VehicleType {
-    CAR,
-    BIKE,
-    TRUCK
-};
-class Vehicle {
-    string licensePlate;
-    VehicleType type; // e.g., "Car", "Bike", "Truck"
-};
-enum class SpotType {
-    COMPACT,
-    LARGE,
-    HANDICAPPED
-};
+#include <iostream>
+#include <vector>
+#include <string>
+#include <unordered_map>
+#include <mutex>
+#include <chrono>
+#include <cmath>
+#include <memory>
+
+using namespace std;
+
+// --- Enums & Helpers ---
+enum class VehicleType { BIKE, CAR, TRUCK };
+enum class SpotType { COMPACT, LARGE, HANDICAPPED };
+using TimePoint = chrono::system_clock::time_point;
+
+// ==========================================
+// Step 3: Entities
+// ==========================================
+
 class ParkingSpot {
     int id;
-    SpotType type; // e.g., "Compact", "Large", "Handicapped"
-    bool isOccupied_;
+    SpotType type;
+    bool occupied;
 public:
-    ParkingSpot(int spotId, SpotType spotType) : id(spotId), type(spotType), isOccupied_(false) {}
-    bool isOccupied() const { return isOccupied_; }
-    void setOccupied(bool status) { isOccupied_ = status; }
-    bool canFit(VehicleType vehicleType) const {
-        // Logic to determine if the spot can fit the vehicle type
-        return true; // Placeholder
-    }
-    void setId(int spotId) { id = spotId; }
+    ParkingSpot(int id, SpotType t) : id(id), type(t), occupied(false) {}
     int getId() const { return id; }
-};
+    bool isOccupied() const { return occupied; }
+    void setOccupied(bool status) { occupied = status; }
 
-class ParkingLevel {
-    int id;
-    int levelNumber;
-    vector<ParkingSpot> spots;
-public:
-    ParkingLevel(int levelId, int levelNum) : id(levelId), levelNumber(levelNum) {}
-    void addSpot(const ParkingSpot& spot) { spots.push_back(spot); }
-    int countAvailableSpots(VehicleType type) const {
-        // Logic to count available spots
-        int count = 0;
-        for(auto spot : spots) {
-            if(!spot.isOccupied() and spot.canFit(type)) {
-                count++;
-            }
-        }
-        return count; 
-    }
-    ParkingSpot* findAvailableSpot(VehicleType type) {
-        for(auto& spot : spots) {
-            if(!spot.isOccupied() and spot.canFit(type)) {
-                return &spot;
-            }
-        }
-        return nullptr;
-    }
-    vector<ParkingSpot> getSpots() {
-        return spots;
-    }
-
-};
-
-//Applying Strategy Pattern on spot assignment
-class ISpotAssignmentStrategy {
-public:
-    virtual ~ISpotAssignmentStrategy() = default;
-    virtual ParkingSpot* assignSpot(vector<ParkingLevel>& levels, VehicleType type) = 0;
-};
-
-class LowestLevelFirstStrategy : public ISpotAssignmentStrategy {
-public:
-    ParkingSpot* assignSpot(vector<ParkingLevel>& levels, VehicleType type) override {
-        for (auto& level : levels) {
-            ParkingSpot* spot = level.findAvailableSpot(type);
-            if (spot) {
-                return spot;
-            }
-        }
-        return nullptr;
+    bool canFit(VehicleType vType) const {
+        if (type == SpotType::HANDICAPPED) return true; 
+        if (vType == VehicleType::BIKE) return true;
+        if (vType == VehicleType::CAR) return (type == SpotType::COMPACT || type == SpotType::LARGE);
+        if (vType == VehicleType::TRUCK) return (type == SpotType::LARGE);
+        return false;
     }
 };
 
-// Applying strategy pattern on Payment Calculation can be done similarly
-class IRateCalculationStrategy {
+class Ticket {
 public:
-    virtual ~IRateCalculationStrategy() = default;
-    virtual double calculateFees(TimePoint inTime, TimePoint outTime) = 0;
-};  
-class HourlyRateCalculationStrategy : public IRateCalculationStrategy {
-public:
-    double calculateFees(TimePoint inTime, TimePoint outTime) override {
-        // Logic to calculate hourly fees
-        auto duration = chrono::duration_cast<chrono::hours>(outTime - inTime).count();
-        double ratePerHour = 10.0; // 
-        return duration * ratePerHour;
-    }
-};  
+    string id;
+    string licensePlate;
+    int spotId;
+    TimePoint entryTime;
+    bool isActive;
 
-class ParkingLot {
-    int id;
-    string name;
-    vector<ParkingLevel> levels_;
-public:
-    ParkingLot() {}
-    ParkingLot(int lotId, string lotName) : id(lotId), name(lotName) {}
-    void addLevel(const ParkingLevel& level) { levels_.push_back(level); }
-    string getName() const { return name; }
-    vector<ParkingLevel>& getLevels() {
-        return levels_;
-    }
+    Ticket(string id, string lp, int sid) 
+        : id(id), licensePlate(lp), spotId(sid), entryTime(chrono::system_clock::now()), isActive(true) {}
 };
+
+// ==========================================
+// Step 5: Design Patterns (Repositories & Strategies)
+// ==========================================
 
 class TicketRepository {
-    public:
-    // Implementation for storing and retrieving tickets
-    Ticket* createTicket(string licensePlate, int spotId, TimePoint inTime) {
-        // Logic to create and store a ticket
-        return new Ticket(); // Placeholder
-    }
-    Ticket* getTicket(string ticketId) {
-        // Logic to retrieve a ticket by ID
-        return new Ticket(); // Placeholder
-    }
-};
-class Ticket {
-    int id;
-    string vehicleLicensePlate;
-    int parkingSpotId;
-    TimePoint inTime;
-    TimePoint outTime;
-    double fees;
+    unordered_map<string, unique_ptr<Ticket>> ticketDb;
 public:
-    int getId() const { return id; }
-    void close() {
-        outTime = Clock::now();
-        // Logic to calculate fees
-    }
-    bool closed() const {
-        return outTime.time_since_epoch().count() != 0;
-    }
-    TimePoint getInTime() const {
-        return inTime;
-    }
-    TimePoint getOutTime() const {
-        return outTime;
+    void save(unique_ptr<Ticket> t) { ticketDb[t->id] = move(t); }
+    Ticket* findById(string id) { return ticketDb.count(id) ? ticketDb[id].get() : nullptr; }
+};
+
+class IAssignmentStrategy {
+public:
+    virtual ParkingSpot* findSpot(vector<vector<ParkingSpot>>& levels, VehicleType vType) = 0;
+};
+
+class LowestFloorFirst : public IAssignmentStrategy {
+public:
+    ParkingSpot* findSpot(vector<vector<ParkingSpot>>& levels, VehicleType vType) override {
+        for (auto& level : levels) {
+            for (auto& spot : level) {
+                if (!spot.isOccupied() && spot.canFit(vType)) return &spot;
+            }
+        }
+        return nullptr;
     }
 };
 
-//Step 2
+class IFeeStrategy {
+public:
+    virtual double calculate(TimePoint entry) = 0;
+};
+
+class HourlyFee : public IFeeStrategy {
+public:
+    double calculate(TimePoint entry) override {
+        auto now = chrono::system_clock::now();
+        auto duration = chrono::duration_cast<chrono::hours>(now - entry).count();
+        return max(1.0, (double)duration + 1) * 10.0; // $10/hr, min 1 hr
+    }
+};
+
+// ==========================================
+// Step 2, 6, 7: Service Flow & Concurrency
+// ==========================================
+
+
+
 class ParkingLotService {
-    ParkingLot parkingLot_;
-    ISpotAssignmentStrategy* spotAssignmentStrategy_;
-    IRateCalculationStrategy* feeCalculationStrategy_;
-    mutex lotMutex; // To handle concurrent access
-    public:
-    void simulateTimePass(int seconds) {
-        this_thread::sleep_for(chrono::seconds(seconds));
-    }
-    ParkingLotService(ParkingLot parkingLot, ISpotAssignmentStrategy* spotStrategy, IRateCalculationStrategy* feeStrategy) {
-        parkingLot_ = parkingLot;
-        spotAssignmentStrategy_ = spotStrategy;
-        feeCalculationStrategy_ = feeStrategy;
-    }
-    string parkVehicle(string licensePlate, VehicleType type) {
-        lock_guard<mutex> lock(lotMutex);
-        // Logic to park vehicle
-        // Find an available spot
-        ParkingSpot* spot = spotAssignmentStrategy_->assignSpot(parkingLot_.getLevels(), type);
-        if (!spot) {
-            return "No available spots.";
+    vector<vector<ParkingSpot>> levels; 
+    TicketRepository ticketRepo;
+    IAssignmentStrategy* assignmentStrategy;
+    IFeeStrategy* feeStrategy;
+    mutex lotMutex; // Step 7: Concurrency control
+
+public:
+    ParkingLotService(int numLevels, int spotsPerLevel) {
+        for (int i = 0; i < numLevels; i++) {
+            vector<ParkingSpot> level;
+            for (int j = 0; j < spotsPerLevel; j++) {
+                SpotType st = (j % 3 == 0) ? SpotType::LARGE : (j % 2 == 0 ? SpotType::COMPACT : SpotType::HANDICAPPED);
+                level.emplace_back(i * 100 + j, st);
+            }
+            levels.push_back(move(level));
         }
-        // Mark the spot as occupied
-        spot->setOccupied(true);
-        // Generate a ticket
-        TicketRepository ticketRepo;
-        Ticket* ticket = ticketRepo.createTicket(
-            licensePlate,
-            spot->getId(),
-            Clock::now()
-        );
-        spot->setOccupied(true);
-        // Return the ticket ID
-        return to_string(ticket->getId());
+        assignmentStrategy = new LowestFloorFirst();
+        feeStrategy = new HourlyFee();
     }
+
+    string parkVehicle(string lp, VehicleType vType) {
+        lock_guard<mutex> lock(lotMutex); // Atomic booking
+
+        ParkingSpot* spot = assignmentStrategy->findSpot(levels, vType);
+        if (!spot) return "ERROR: Parking Full";
+
+        spot->setOccupied(true);
+        string tId = "TKT-" + lp + "-" + to_string(rand() % 1000);
+        ticketRepo.save(make_unique<Ticket>(tId, lp, spot->getId()));
+
+        return tId;
+    }
+
     double unparkVehicle(string ticketId) {
         lock_guard<mutex> lock(lotMutex);
-        // Logic to unpark vehicle and calculate fees
-        // Find the ticket
-        TicketRepository ticketRepo;
-        Ticket* ticket = ticketRepo.getTicket(ticketId);
-        if (!ticket) {
-            throw runtime_error("Ticket not found"); // Ticket not found
-        }
-        
-        if(ticket->closed()) {
-            throw runtime_error("Ticket already closed");
-        }
-        double fee = feeCalculationStrategy_->calculateFees(ticket->getInTime(),Clock::now());
-        ticket->close();
-        // Mark the spot as available
-        for(auto& level : parkingLot_.getLevels()) {
-            for(auto& spot : level.getSpots()) {
-                if(spot.getId() == ticket->getId()) {
+
+        Ticket* t = ticketRepo.findById(ticketId);
+        if (!t || !t->isActive) throw runtime_error("Invalid Ticket");
+
+        // Release spot
+        for (auto& level : levels) {
+            for (auto& spot : level) {
+                if (spot.getId() == t->spotId) {
                     spot.setOccupied(false);
+                    break;
                 }
             }
         }
-        // Calculate parking duration and fees  
-        return fee;
+
+        t->isActive = false;
+        return feeStrategy->calculate(t->entryTime);
     }
-    int getAvailableSlots(VehicleType type) {
-        // Logic to count available slots
-        int totalAvailable = 0;
-        for (const auto& level : parkingLot_.getLevels()) {
-            totalAvailable += level.countAvailableSpots(type);
+
+    int getAvailableSlots(VehicleType vType) {
+        int count = 0;
+        for (auto& level : levels) {
+            for (auto& spot : level) {
+                if (!spot.isOccupied() && spot.canFit(vType)) count++;
+            }
         }
-        return totalAvailable;
+        return count;
     }
 };
 
-
-// --- Main Function for Illustration ---
+// ==========================================
+// Main Function
+// ==========================================
 int main() {
-    cout << "### Parking Lot Simulation Start ###" << endl;
-    
-    // --- 1. Setup Parking Lot Structure ---
-    
-    // 1A. Create a few spots for Level 1 (ID: 101, 102, 103)
-    ParkingLevel level1(1, 1);
-    level1.addSpot(ParkingSpot(101, SpotType::COMPACT)); // Car, Bike
-    level1.addSpot(ParkingSpot(102, SpotType::LARGE));   // Car, Truck
-    level1.addSpot(ParkingSpot(103, SpotType::COMPACT)); // Car, Bike
-    
-    // 1B. Create a few spots for Level 2 (ID: 201, 202)
-    ParkingLevel level2(2, 2);
-    level2.addSpot(ParkingSpot(201, SpotType::HANDICAPPED)); // Any
-    level2.addSpot(ParkingSpot(202, SpotType::LARGE));       // Car, Truck
+    ParkingLotService service(2, 10);
 
-    // 1C. Create the ParkingLot and add levels
-    ParkingLot mainLot(10, "Downtown Garage");
-    mainLot.addLevel(level1);
-    mainLot.addLevel(level2);
-    
-    // --- 2. Setup Strategies and Service ---
-    
-    // Using Strategy Pattern
-    LowestLevelFirstStrategy spotStrategy;
-    HourlyRateCalculationStrategy feeStrategy;
-    
-    // Initialize the Service
-    ParkingLotService lotService(mainLot, &spotStrategy, &feeStrategy);
-    
-    cout << "--- Parking Lot: " << mainLot.getName() << " Initialized ---" << endl;
-    cout << "Available CAR slots: " << lotService.getAvailableSlots(VehicleType::CAR) << endl; // Should be 5
-    cout << "Available TRUCK slots: " << lotService.getAvailableSlots(VehicleType::TRUCK) << endl; // Should be 3
-    cout << "--------------------------------------------------------" << endl;
+    cout << "Initial CAR slots: " << service.getAvailableSlots(VehicleType::CAR) << endl;
 
-    // --- 3. Parking Scenarios ---
-    
-    // Scenario 1: Park a CAR
-    string ticketCar = lotService.parkVehicle("ABC-123", VehicleType::CAR);
-    if (!ticketCar.empty()) {
-        cout << " CAR Parked. Ticket ID: " << ticketCar << endl; // Should be in Spot 101 (Lowest Level First)
-    }
+    string ticket = service.parkVehicle("ABC-123", VehicleType::CAR);
+    cout << "Vehicle Parked. Ticket: " << ticket << endl;
 
-    // Scenario 2: Park a TRUCK
-    string ticketTruck = lotService.parkVehicle("XYZ-789", VehicleType::TRUCK);
-    if (!ticketTruck.empty()) {
-        cout << " TRUCK Parked. Ticket ID: " << ticketTruck << endl; // Should be in Spot 102 (Lowest Level First, and LARGE)
-    }
-    
-    // Scenario 3: Park another CAR (moves to next available on lowest level, then up)
-    string ticketCar2 = lotService.parkVehicle("DEF-456", VehicleType::CAR);
-    if (!ticketCar2.empty()) {
-        cout << " CAR 2 Parked. Ticket ID: " << ticketCar2 << endl; // Should be in Spot 103
-    }
-    
-    // Now, Level 1 Compact (101, 103) and Large (102) are occupied.
-    // Next CAR should go to Level 2 Spot 201 (Handicapped) or 202 (Large)
-    string ticketCar3 = lotService.parkVehicle("GHI-101", VehicleType::CAR);
-    if (!ticketCar3.empty()) {
-        cout << " CAR 3 Parked. Ticket ID: " << ticketCar3 << endl; // Should be in Spot 201 or 202
-    }
-    
-    cout << "\nAvailable CAR slots now: " << lotService.getAvailableSlots(VehicleType::CAR) << endl; // Should be 1 remaining
+    cout << "CAR slots remaining: " << service.getAvailableSlots(VehicleType::CAR) << endl;
 
-    // --- 4. Unparking Scenario (Fee Calculation) ---
-    
-    // Simulate time passing before unparking the first car
-    lotService.simulateTimePass(3600 + 1); // 1 hour and 1 second
+    double fee = service.unparkVehicle(ticket);
+    cout << "Vehicle Unparked. Fee Owed: $" << fee << endl;
 
-    try {
-        double fee = lotService.unparkVehicle(ticketCar);
-        cout << " Final CAR (ABC-123) Fee: $" << fee << " (Billed 2 hours due to rounding up)." << endl;
-    } catch (const runtime_error& e) {
-        cerr << "Unpark Failed: " << e.what() << endl;
-    }
-
-    cout << "\nAvailable CAR slots after unparking: " << lotService.getAvailableSlots(VehicleType::CAR) << endl; // Should increase by 1
-    
-    // --- 5. Illustrating No Available Spot ---
-    
-    // Occupy all remaining spots to force failure
-    lotService.parkVehicle("J-001", VehicleType::CAR); // Takes remaining spot
-    lotService.parkVehicle("K-002", VehicleType::TRUCK); // Takes remaining spot
-
-    string ticketFail = lotService.parkVehicle("L-999", VehicleType::BIKE);
-    if (ticketFail.empty()) {
-        cout << " BIKE Park attempt failed as expected: No available spots." << endl;
-    }
-    
-    cout << "\n### Parking Lot Simulation End ###" << endl;
-    
-    // Cleanup (in a real app, smart pointers would manage this)
-    // Note: Tickets are currently dynamically allocated in the TicketRepository mock.
-    // A proper destructor/cleanup would be needed for a robust application.
     return 0;
 }
