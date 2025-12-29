@@ -98,6 +98,7 @@ public:
     TimePoint entryTime;
     bool isActive;
 
+    Ticket() : spotId(-1), isActive(false) {}
     Ticket(string id, string lp, int sid) 
         : id(id), licensePlate(lp), spotId(sid), entryTime(chrono::system_clock::now()), isActive(true) {}
 };
@@ -107,10 +108,13 @@ public:
 // ==========================================
 
 class TicketRepository {
-    unordered_map<string, unique_ptr<Ticket>> ticketDb;
+    unordered_map<string, Ticket> ticketDb; // In-memory DB , map TicketID to Ticket
 public:
-    void save(unique_ptr<Ticket> t) { ticketDb[t->id] = move(t); }
-    Ticket* findById(string id) { return ticketDb.count(id) ? ticketDb[id].get() : nullptr; }
+    void save(Ticket t) {
+        string id = t.id;
+        ticketDb[id] = move(t);
+    }
+    Ticket* findById(string id) { return ticketDb.count(id) ? &ticketDb[id] : nullptr; }
 };
 
 class IAssignmentStrategy {
@@ -179,7 +183,7 @@ public:
 
         spot->setOccupied(true);
         string tId = "TKT-" + lp + "-" + to_string(rand() % 1000);
-        ticketRepo.save(make_unique<Ticket>(tId, lp, spot->getId()));
+        ticketRepo.save(Ticket(tId, lp, spot->getId()));
 
         return tId;
     }
