@@ -1,9 +1,10 @@
 //Step 1:
 /* 
- - type support (filtering logic)
- - multiplicity 
- - algorithm / logic
- - concurrency (locking mechanism)
+ 
+ - type support (filtering logic) : movies (language, genre), seats (silver, gold, platinum)
+ - multiplicity : city -> theaters, show -> showseats
+ - algorithm / logic : strategy pattern for pricing
+ - concurrency (locking mechanism) : during seat selection and cancellation
 */
 
 //Step 2: List APIs
@@ -151,7 +152,7 @@ public:
 
 // --- Repository Pattern: Decoupling Data Logic ---
 class MovieRepository {
-    unordered_map<int, vector<Movie>> cityMovieMap; 
+    unordered_map<int, vector<Movie>> cityMovieMap;  // Map cityId to Movies
 public:
     vector<Movie> findAllMovies(int cityId, Date date) {
         // Logic to fetch movies active in a city on a specific date
@@ -161,14 +162,14 @@ public:
 };
 
 class ShowRepository {
-    unordered_map<int, Show*> showDb;
+    unordered_map<int, Show*> showDb; // In-memory DB , map ShowID to Show
 public:
     Show* findById(int id) { return showDb.count(id) ? showDb[id] : nullptr; }
     void save(Show* s) { showDb[s->id] = s; }
 };
 
 class BookingRepository {
-    unordered_map<int, Booking*> bookingDb;
+    unordered_map<int, Booking*> bookingDb; // In-memory DB , map BookingID to Booking
     int nextId = 1000;
 public:
     void save(Booking* b) { 
@@ -188,6 +189,11 @@ public:
 class HolidayPricing : public IPricingStrategy {
 public:
     double calculate(double base) override { return base * 1.5; } // 50% surge
+};
+
+class RegularPricing : public IPricingStrategy {
+public:
+    double calculate(double base) override { return base; } // No change
 };
 
 // =========================================================
@@ -271,6 +277,7 @@ int main() {
     MovieRepository movieRepo;
     ShowRepository showRepo;
     BookingRepository bookingRepo;
+    RegularPricing regularSurge;
     HolidayPricing holidaySurge;
 
     // 2. Mock Data Setup
