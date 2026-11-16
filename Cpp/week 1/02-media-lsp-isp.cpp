@@ -1,3 +1,4 @@
+// Question: Design audio and live-camera players that can play, pause, record, stream, and download.
 // 02-media-lsp-isp.cpp
 // Messy starter: Fat interface + LSP surprises (violates ISP + LSP)
 

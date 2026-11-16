@@ -1,3 +1,4 @@
+// Question: Design audio and live-camera players so play, download, record, and live streaming are separate capabilities.
 // 02-media-ans.cpp
 // Refactored to follow ISP and LSP.
 

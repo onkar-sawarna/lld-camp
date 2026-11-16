@@ -1,3 +1,4 @@
+// Question: Design a signup service that sends a welcome email and a one-time text code when a user registers.
 // 03-notify-dip-ocp.cpp
 #include <iostream>
 #include <string>

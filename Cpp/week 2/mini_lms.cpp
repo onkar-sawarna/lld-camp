@@ -1,3 +1,4 @@
+// Question: Design a learning system where students enroll in courses of modules and lessons, complete lessons, and receive enrollment and completion notices.
 // mini_lms.cpp
 
 #include <iostream>
