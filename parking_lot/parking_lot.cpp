@@ -237,3 +237,15 @@ int main() {
 
     return 0;
 }
+
+// Time Complexity: O(P)
+// Space Complexity: O(P + T)
+// Pattern: Design - ParkingLotService
+// explanation:
+/*
+Spots are vectors of vectors, one inner vector per level, and P is the total number of spots.
+LowestFloorFirst walks those vectors in order until it finds a free spot that canFit the vehicle.
+TicketRepository is an unordered map, so saving or finding a ticket id is expected O(1) and does not dominate.
+unpark still scans every spot to match the stored spot id before HourlyFee runs.
+getAvailableSlots scans every spot. The mutex wraps park and unpark so two gates cannot take the same spot.
+*/

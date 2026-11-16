@@ -83,3 +83,15 @@ int main() {
     cout << svc.process(items, discounts, "customer@example.com") << endl;
     return 0;
 }
+
+// Time Complexity: O(I + D)
+// Space Complexity: O(I + D)
+// Pattern: Design - InvoiceService
+// explanation:
+/*
+process walks the item vector to form the subtotal, which is linear in the item count I.
+It then walks the discount map, applying a percent or a flat amount for each entry.
+Tax, the invoice text, the SMTP print, and the log line all run inside that same method.
+computeTotal calls process and scans the rendered text for the Total line.
+The items and the discount map are the stored input.
+*/

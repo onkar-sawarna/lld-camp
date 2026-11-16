@@ -235,3 +235,15 @@ int main() {
     cout << svc.process(invoice) << endl;
     return 0;
 }
+
+// Time Complexity: O(I + D)
+// Space Complexity: O(I + D)
+// Pattern: Design - InvoiceService
+// explanation:
+/*
+process scans the line-item vector once, so the subtotal is linear in the item count I.
+Each IDiscount sits in a second vector and apply is a constant-time formula, so D discounts are one more linear pass.
+Tax, email, and logging are injected objects and do not search a collection.
+TextInvoiceRenderer walks the same item vector again while writing the text.
+Invoice stores the items and the discount strategies.
+*/

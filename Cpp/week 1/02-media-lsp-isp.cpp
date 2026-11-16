@@ -63,3 +63,14 @@ int main() {
     }
     return 0;
 }
+
+// Time Complexity: O(1)
+// Space Complexity: O(1)
+// Pattern: Design - Player
+// explanation:
+/*
+Player declares play, pause, record, streamLive, and download on every subclass.
+AudioPlayer and CameraStreamPlayer implement each one with a flag write, a print, or an immediate throw.
+No method walks a collection, so every call is constant time.
+Each object stores only its playing flag and, for the camera, whether the live stream has started.
+*/

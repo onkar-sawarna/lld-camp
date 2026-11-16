@@ -431,3 +431,15 @@ int main() {
 
     return 0;
 }
+
+// Time Complexity: O(C + E)
+// Space Complexity: O(L + E)
+// Pattern: Design - EnrollmentService
+// explanation:
+/*
+Courses and enrollments are vectors in the in-memory repositories, so a find walks from the front.
+enroll appends one Enrollment to that vector and sends through the notification channel.
+completeLesson scans the course vector and the enrollment vector, then appends a completed lesson id.
+updateProgress is arithmetic on the completed-lesson count and the course's lesson total.
+addLesson and addModule append to their own vectors, and LmsService uses the same linear scans.
+*/

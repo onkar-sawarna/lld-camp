@@ -40,3 +40,14 @@ int main() {
     svc.signUp({"user@example.com", "+15550001111"});
     return 0;
 }
+
+// Time Complexity: O(1)
+// Space Complexity: O(1)
+// Pattern: Design - SignUpService
+// explanation:
+/*
+signUp returns immediately on an empty email.
+It then builds an SmtpMailer and a TwilioClient as local objects and calls one method on each.
+Those methods only print a line, and nothing is looked up in a collection.
+The service stores no user list between calls.
+*/

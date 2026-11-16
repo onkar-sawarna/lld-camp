@@ -53,3 +53,14 @@ int main() {
     svc.signUp({"user@example.com", "+15550001111"});
     return 0;
 }
+
+// Time Complexity: O(1)
+// Space Complexity: O(1)
+// Pattern: Design - SignUpService
+// explanation:
+/*
+signUp returns immediately on an empty email. Otherwise it sends one welcome mail and one OTP.
+The service stores references to ISmtpMailer and ITwilioClient, so the call does not search for a provider.
+SmtpMailer::send and TwilioClient::sendOTP only write one line each.
+This file keeps no user table and no message queue.
+*/

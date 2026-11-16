@@ -102,3 +102,14 @@ int main() {
 
     return 0;
 }
+
+// Time Complexity: O(1)
+// Space Complexity: O(1)
+// Pattern: Design - AudioPlayer
+// explanation:
+/*
+AudioPlayer stores a playing flag. play, pause, and download only flip that flag or write a line.
+CameraStreamPlayer stores a streaming flag. startStreaming, stopStreaming, and record only read or write that flag.
+Neither object keeps a playlist, buffer, or other collection, so none of these calls walks memory.
+The small interfaces are what keep each object to the operations it actually implements.
+*/

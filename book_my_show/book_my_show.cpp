@@ -310,3 +310,15 @@ int main() {
 
     return 0;
 }
+
+// Time Complexity: O(S) expected
+// Space Complexity: O(M + H + B)
+// Pattern: Design - BookMyShowService
+// explanation:
+/*
+ShowRepository and BookingRepository are unordered maps, so a show id or a booking id is an expected O(1) lookup.
+searchMovies returns the vector already stored for that city.
+createBooking holds the mutex, then checks and marks each requested seat in the show's seat map.
+cancelBooking holds the mutex, finds the booking, and sets those seats back to available.
+S is the number of seats in the call. Movies, shows, and bookings are the stored maps.
+*/

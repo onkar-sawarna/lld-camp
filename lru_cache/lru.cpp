@@ -177,3 +177,15 @@ int main() {
 
     return 0;
 }
+
+// Time Complexity: O(1) expected
+// Space Complexity: O(capacity)
+// Pattern: Design - LRUCache
+// explanation:
+/*
+cacheMap is an unordered map from key to node, so get and put find a key in expected constant time.
+The nodes are a doubly linked list with sentinel head and tail, so RemoveNode and AddToFront relink a fixed number of pointers.
+A new put at full capacity evicts the node just before tail, which is the least recently used key.
+A mutex guards get, put, and size, so those calls run one at a time.
+The map and the list store one node per key, up to capacity.
+*/
